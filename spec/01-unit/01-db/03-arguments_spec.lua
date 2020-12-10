@@ -7,6 +7,8 @@ local decode_arg  = arguments.decode_arg
 local decode      = arguments.decode
 local combine     = arguments.combine
 
+local deep_sort   = require "spec.helpers".deep_sort
+
 
 describe("arguments.infer_value", function()
   it("infers numbers", function()
@@ -180,7 +182,7 @@ end)
 describe("arguments.decode", function()
 
   it("decodes complex nested parameters", function()
-    assert.same({
+    assert.same(deep_sort{
       c = "test",
       a = {
         {
@@ -205,7 +207,7 @@ describe("arguments.decode", function()
         }
       },
     },
-    decode{
+    deep_sort(decode{
       ["a.b.c.d"] = "",
       ["a"]       = { "1", "2", "3" },
       ["c"]       = "test",
@@ -213,7 +215,7 @@ describe("arguments.decode", function()
       ["a[]"]     = { "a", "b", "c" },
       ["a[99]"]   = "wayne",
       ["a[1]"]    = "first",
-    })
+    }))
   end)
 
   it("decodes complex nested parameters combinations", function()
@@ -301,7 +303,7 @@ describe("arguments.decode", function()
           { "5", "6", "2" },
         }
       },
-      decoded
+      (decoded)
     )
   end)
 
