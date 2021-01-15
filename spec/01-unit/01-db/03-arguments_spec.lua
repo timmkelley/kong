@@ -298,12 +298,12 @@ describe("arguments.decode", function()
     }
 
     assert.same(
-      { a = {
+      deep_sort{ a = {
           { "4", "1", "3" },
           { "5", "6", "2" },
         }
       },
-      (decoded)
+      deep_sort(decoded)
     )
   end)
 
