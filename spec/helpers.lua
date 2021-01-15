@@ -1530,27 +1530,34 @@ luassert:register("assertion", "contains", contains,
                   "assertion.contains.negative",
                   "assertion.contains.positive")
 
+local deep_sort do
+  local function deep_compare(a, b)
+    deep_sort(a)
+    deep_sort(b)
 
-local function loose_compare(a, b)
-  if type(a) ~= type(b) then
-    return type(a) < type(b)
-  end
-  if type(a) == "table" then
-    return false
-  end
-
-  return a < b
-end
-local function deep_sort(t)
-  if type(t) == "table" then
-    table.sort(t, loose_compare)
-    for k, v in pairs(t) do
-      deep_sort(v)
+    if type(a) ~= type(b) then
+      return type(a) < type(b)
     end
+
+    if type(a) == "table" then
+      return deep_compare(a[1], b[1])
+    end
+
+    return a < b
   end
 
-  return t
+  function deep_sort(t)
+    if type(t) == "table" then
+      for _, v in pairs(t) do
+        deep_sort(v)
+      end
+      table.sort(t, deep_compare)
+    end
+
+    return t
+  end
 end
+
 
 --- Assertion to check the status-code of a http response.
 -- @function status
