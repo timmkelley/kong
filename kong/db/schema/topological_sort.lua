@@ -1,4 +1,23 @@
+local CORE_ENTITIES = require("kong.constants").CORE_ENTITIES
 local table_insert = table.insert
+
+
+local sort_core_first do
+  local CORE_SCORE = {}
+  for _, v in ipairs(CORE_ENTITIES) do
+    CORE_SCORE[v] = 1
+  end
+  CORE_SCORE["workspaces"] = 2
+
+  sort_core_first = function(a, b)
+    local sa = CORE_SCORE[a.name] or 0
+    local sb = CORE_SCORE[b.name] or 0
+    if sa == sb then
+      return a.name < b.name
+    end
+    return sa < sb
+  end
+end
 
 -- Given an array of schemas, build a table were the keys are schemas and the values are
 -- the list of schemas with foreign keys pointing to them
@@ -73,25 +92,15 @@ local function visit(current, neighbors_map, visited, marked, sorted)
 end
 
 
-local function move_workspaces_to_front(sorted_schemas)
-  local workspaces_schema
-  for i, s in ipairs(sorted_schemas) do
-    if s.name == "workspaces" then
-      workspaces_schema = s
-      table.remove(sorted_schemas, i)
-      break
-    end
-  end
-  if workspaces_schema then
-    table.insert(sorted_schemas, 1, workspaces_schema)
-  end
-end
-
-
--- Given an array of schemas, return it sorted so that if
--- schema B has a foreign key to A, then B appears after A
+-- Given an array of schemas, return it sorted so that:
+--
+-- * If schema B has a foreign key to A, then B appears after A
+-- * When there's no foreign keys, core schemas appear before plugin entities
+-- * If none of the rules above apply, schemas are sorted alphabetically by name
+--
 -- The function returns an error if cycles are found in the schemas
 -- (i.e. A has a foreign key to B and B to A)
+--
 -- @tparam array schemas an array with zero or more schemas
 -- @treturn array|nil an array of schemas sorted topologically, or nil if cycle was found
 -- @treturn nil|string nil if the schemas were sorted, or a message if a cycle was found
@@ -102,6 +111,15 @@ local function topological_sort(schemas)
   local sorted = {}
   local visited = {}
   local marked = {}
+
+  local copy = {}
+  for i = 1, #schemas do
+    copy[i] = schemas[i]
+  end
+  schemas = copy
+
+  table.sort(schemas, sort_core_first)
+
   local neighbors_map = build_neighbors_map(schemas)
 
   local current, ok, err
@@ -114,8 +132,6 @@ local function topological_sort(schemas)
       end
     end
   end
-
-  move_workspaces_to_front(sorted)
 
   return sorted
 end
