@@ -1532,6 +1532,14 @@ luassert:register("assertion", "contains", contains,
 
 local deep_sort do
   local function deep_compare(a, b)
+    if a == nil then
+      a = ""
+    end
+
+    if b == nil then
+      b = ""
+    end
+
     deep_sort(a)
     deep_sort(b)
 
