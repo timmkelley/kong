@@ -2,7 +2,7 @@ local cjson = require "cjson.safe"
 local ngx_ssl = require "ngx.ssl"
 
 local proc_mgmt = require "kong.runloop.plugin_servers.process"
-local rpc = require "kong.runloop.plugin_servers.mp_rpc"
+local rpc = require "kong.runloop.plugin_servers.pb_rpc"
 
 local ngx = ngx
 local kong = kong
@@ -89,9 +89,10 @@ local function get_instance_id(plugin_name, conf)
   local plugin_info = get_plugin_info(plugin_name)
   local server_rpc  = get_server_rpc(plugin_info.server_def)
 
-  local status, err = server_rpc:call("plugin.StartInstance", {
-    Name = plugin_name,
-    Config = cjson_encode(conf)
+  kong.log.debug("will call , cmd_start_instance: ", plugin_name, ", ", cjson_encode(conf))
+  local status, err = server_rpc:call("cmd_start_instance", {
+    name = plugin_name,
+    config = cjson_encode(conf)
   })
   if status == nil then
     kong.log.err("starting instance: ", err)
@@ -292,35 +293,35 @@ local function bridge_loop(instance_rpc, instance_id, phase)
   if not instance_rpc then
     kong.log.err("no instance_rpc: ", debug.traceback())
   end
-  local step_in, err = instance_rpc:call("plugin.HandleEvent", {
-    InstanceId = instance_id,
-    EventName = phase,
-  })
+  local step_in, err = instance_rpc:call("cmd_handle_event", {
+    instance_idd = instance_id,
+    event_name = phase,
+  }, true)
   if not step_in then
     return step_in, err
   end
 
-  local event_id = step_in.EventId
-
-  while true do
-    if step_in.Data == "ret" then
-      break
-    end
-
-    local pdk_res, pdk_err = call_pdk_method(
-      step_in.Data.Method,
-      step_in.Data.Args)
-
-    local step_method, step_res = get_step_method(step_in, pdk_res, pdk_err)
-
-    step_in, err = instance_rpc:call(step_method, {
-      EventId = event_id,
-      Data = step_res,
-    })
-    if not step_in then
-      return step_in, err
-    end
-  end
+  --local event_id = step_in.EventId
+  --
+  --while true do
+  --  if step_in.Data == "ret" then
+  --    break
+  --  end
+  --
+  --  local pdk_res, pdk_err = call_pdk_method(
+  --    step_in.Data.Method,
+  --    step_in.Data.Args)
+  --
+  --  local step_method, step_res = get_step_method(step_in, pdk_res, pdk_err)
+  --
+  --  step_in, err = instance_rpc:call(step_method, {
+  --    EventId = event_id,
+  --    Data = step_res,
+  --  })
+  --  if not step_in then
+  --    return step_in, err
+  --  end
+  --end
 end
 
 
