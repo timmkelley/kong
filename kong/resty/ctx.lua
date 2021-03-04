@@ -48,7 +48,6 @@ function _M.stash_ref(ctx)
       local _ = ngx.ctx -- load context if not previously loaded
     end
   end
-  ngx.log(ngx.ERR, type(r))
   local ctx_ref = C.ngx_http_lua_ffi_get_ctx_ref(r, in_ssl_phase, ssl_ctx_ref)
   if ctx_ref == FFI_NO_REQ_CTX then
     ngx.log(ngx.WARN, "could not stash ngx.ctx ref: no ctx found")
