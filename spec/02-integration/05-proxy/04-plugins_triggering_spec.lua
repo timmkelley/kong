@@ -862,7 +862,7 @@ for _, strategy in helpers.each_strategy() do
       end)
 
 
-      it("executes a global log plugin on Nginx-produced client errors (HTTP 494)", function()
+      it("executes a global log plugin on Nginx-produced client errors (HTTP 400) #doge", function()
         -- triggers error_page directive
         local uuid = utils.uuid()
 
@@ -875,7 +875,7 @@ for _, strategy in helpers.each_strategy() do
             ["X-UUID"] = uuid,
           }
         })
-        assert.res_status(494, res)
+        assert.res_status(400, res)
 
         -- close and reopen to flush the request
         proxy_client:close()
@@ -893,11 +893,11 @@ for _, strategy in helpers.each_strategy() do
         local log_message = cjson.decode(pl_stringx.strip(log):match("%b{}"))
 
         assert.equal(uuid, log_message.request.headers["x-uuid"])
-        assert.equal(494, log_message.response.status)
+        assert.equal(400, log_message.response.status)
       end)
 
 
-      it("log plugins sees same request in error_page handler (HTTP 494)", function()
+      it("log plugins sees same request in error_page handler (HTTP 400)", function()
         -- triggers error_page directive
         local uuid = utils.uuid()
 
@@ -915,7 +915,7 @@ for _, strategy in helpers.each_strategy() do
           }
           --]]
         })
-        assert.res_status(494, res)
+        assert.res_status(400, res)
 
         -- close and reopen to flush the request
         proxy_client:close()
@@ -935,7 +935,7 @@ for _, strategy in helpers.each_strategy() do
         assert.equal("bar", log_message.request.querystring.foo)
         assert.equal("", log_message.upstream_uri) -- no URI here since Nginx could not parse request
         assert.equal(uuid, log_message.request.headers["x-uuid"])
-        assert.is_nil(log_message.request.headers.host) -- none as well
+        assert.equal("unavailable", log_message.request.headers.host) -- none as well
       end)
 
 
