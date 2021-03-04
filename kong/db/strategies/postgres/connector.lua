@@ -5,6 +5,7 @@ local arrays       = require "pgmoon.arrays"
 local stringx      = require "pl.stringx"
 local semaphore    = require "ngx.semaphore"
 local kong_global = require "kong.global"
+local topological_sort = require "kong.db.schema.topological_sort"
 
 
 local setmetatable = setmetatable
@@ -57,70 +58,6 @@ local function now_updated()
 end
 
 
-local function visit(k, n, m, s)
-  if m[k] == 0 then return 1 end
-  if m[k] == 1 then return end
-  m[k] = 0
-  local f = n[k]
-  for i=1, #f do
-    if visit(f[i], n, m, s) then return 1 end
-  end
-  m[k] = 1
-  s[#s+1] = k
-end
-
-
-local tsort = {}
-tsort.__index = tsort
-
-
-function tsort.new()
-  return setmetatable({ n = {} }, tsort)
-end
-
-
-function tsort:add(...)
-  local p = { ... }
-  local c = #p
-  if c == 0 then return self end
-  if c == 1 then
-    p = p[1]
-    if type(p) == "table" then
-      c = #p
-    else
-      p = { p }
-    end
-  end
-  local n = self.n
-  for i=1, c do
-    local f = p[i]
-    if n[f] == nil then n[f] = {} end
-  end
-  for i=2, c, 1 do
-    local f = p[i]
-    local t = p[i-1]
-    local o = n[f]
-    o[#o+1] = t
-  end
-  return self
-end
-
-
-function tsort:sort()
-  local n  = self.n
-  local s = {}
-  local m  = {}
-  for k in pairs(n) do
-    if m[k] == nil then
-      if visit(k, n, m, s) then
-        return nil, "There is a circular dependency in the graph. It is not possible to derive a topological sort."
-      end
-    end
-  end
-  return s
-end
-
-
 local function iterator(rows)
   local i = 0
   return function()
@@ -145,6 +82,23 @@ local function get_table_names(self, excluded)
   end
 
   return table_names
+end
+
+
+local function get_topologically_sorted_table_names(strategies)
+  local schemas = {}
+  for _, strategy in pairs(strategies) do
+    schemas[#schemas + 1] = strategy.schema
+  end
+
+  local sorted_schemas = topological_sort(schemas)
+
+  local sorted_table_names = { "cluster_events" }
+  for i, schema in pairs(sorted_schemas) do
+    sorted_table_names[i + 1] = sorted_schemas[i].name
+  end
+
+  return sorted_table_names
 end
 
 
@@ -260,6 +214,8 @@ setkeepalive = function(connection)
 end
 
 
+
+
 local _mt = {
   reset = reset_schema
 }
@@ -299,30 +255,14 @@ end
 
 function _mt:init_worker(strategies)
   if ngx.worker.id() == 0 then
-    local graph = tsort.new()
 
-    graph:add("cluster_events")
-
-    for _, strategy in pairs(strategies) do
-      local schema = strategy.schema
-      if schema.ttl then
-        local name = schema.name
-        graph:add(name)
-        for _, field in schema:each_field() do
-          if field.type == "foreign" and field.schema.ttl then
-            graph:add(name, field.schema.name)
-          end
-        end
-      end
-    end
-
-    local sorted_strategies = graph:sort()
+    local sorted_table_names = get_topologically_sorted_table_names(strategies)
     local ttl_escaped = self:escape_identifier("ttl")
     local expire_at_escaped = self:escape_identifier("expire_at")
     local cleanup_statements = {}
-    local cleanup_statements_count = #sorted_strategies
+    local cleanup_statements_count = #sorted_table_names
     for i = 1, cleanup_statements_count do
-      local table_name = sorted_strategies[i]
+      local table_name = sorted_table_names[i]
       local column_name = table_name == "cluster_events" and expire_at_escaped
                                                           or ttl_escaped
       cleanup_statements[i] = concat {
@@ -350,11 +290,11 @@ function _mt:init_worker(strategies)
             if not ok then
               if err then
                 log(WARN, "unable to clean expired rows from table '",
-                          sorted_strategies[i], "' on PostgreSQL database (",
+                          sorted_table_names[i], "' on PostgreSQL database (",
                           err, ")")
               else
                 log(WARN, "unable to clean expired rows from table '",
-                          sorted_strategies[i], "' on PostgreSQL database")
+                          sorted_table_names[i], "' on PostgreSQL database")
               end
             end
           end
