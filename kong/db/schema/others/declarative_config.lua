@@ -5,6 +5,7 @@ local Entity = require("kong.db.schema.entity")
 local Schema = require("kong.db.schema")
 local constants = require("kong.constants")
 local plugin_loader = require("kong.db.schema.plugin_loader")
+local topological_sort = require "kong.db.schema.topological_sort"
 
 
 local null = ngx.null
@@ -725,6 +726,8 @@ function DeclarativeConfig.load(plugin_set, include_foreign)
       table.insert(known_entities, entity)
     end
   end
+
+  known_entities = topological_sort(known_entities)
 
   local fields, records = build_fields(known_entities, include_foreign)
   -- assert(no_foreign(fields))
