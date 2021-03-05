@@ -1,6 +1,7 @@
 # Table of Contents
 
 
+- [2.3.3](#233)
 - [2.3.2](#232)
 - [2.3.1](#231)
 - [2.3.0](#230)
@@ -52,6 +53,47 @@
 - [0.10.1](#0101---20170327)
 - [0.10.0](#0100---20170307)
 - [0.9.9 and prior](#099---20170202)
+
+
+## [2.3.3]
+
+> Released 2021/03/05
+
+This is a patch release in the 2.3 series. Being a patch release, it
+strictly contains bugfixes. The are no new features or breaking changes.
+
+### Dependencies
+
+- Bump OpenSSL from `1.1.1i` to `1.1.1j`.
+  [6859](https://github.com/Kong/kong/pull/6859)
+
+### Fixes
+
+##### Core
+
+- Ensure control plane nodes do not execute healthchecks.
+  [6805](https://github.com/Kong/kong/pull/6805)
+- Ensure only one worker executes active healthchecks.
+  [6844](https://github.com/Kong/kong/pull/6844)
+
+##### Admin API
+
+- Remove `prng_seed` from the Admin API and add PIDs instead.
+  [6842](https://github.com/Kong/kong/pull/6842)
+
+##### PDK
+
+- Ensure `kong.log.serialize` properly calculates reported latencies.
+  [6869](https://github.com/Kong/kong/pull/6869)
+
+##### Plugins
+
+- HMAC-Auth: fix issue where the plugin would check if both a username and
+  signature were specified, rather than either.
+  [6826](https://github.com/Kong/kong/pull/6826)
+
+
+[Back to TOC](#table-of-contents)
 
 
 ## [2.3.2]
@@ -5786,6 +5828,7 @@ First version running with Cassandra.
 
 [Back to TOC](#table-of-contents)
 
+[2.3.3]: https://github.com/Kong/kong/compare/2.3.2...2.3.3
 [2.3.2]: https://github.com/Kong/kong/compare/2.3.1...2.3.2
 [2.3.1]: https://github.com/Kong/kong/compare/2.3.0...2.3.1
 [2.3.0]: https://github.com/Kong/kong/compare/2.2.0...2.3.0
