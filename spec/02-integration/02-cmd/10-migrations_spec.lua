@@ -329,7 +329,7 @@ for _, strategy in helpers.each_strategy() do
         run_kong("migrations reset --yes")
       end)
 
-      it("#db is reentrant with migrations up -f", function()
+      it("#db is reentrant with migrations up -f #flaky", function()
         local _, code, stdout, stderr
         code, _, stderr = run_kong("migrations reset --yes", {
           plugins = "bundled"
@@ -385,7 +385,7 @@ for _, strategy in helpers.each_strategy() do
         end
       end)
 
-      it("#db is reentrant with migrations finish -f", function()
+      it("#db is reentrant with migrations finish -f  #flaky", function()
         local _, code, stdout, stderr
         code, _, stderr = run_kong("migrations reset --yes", {
           plugins = "bundled"
